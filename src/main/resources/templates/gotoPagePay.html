@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta>
+    <meta charset="UTF-8">
+    <title>支付宝付、关、退测试</title>
+    　　
+    <script src="http://libs.baidu.com/jquery/2.1.4/jquery.min.js"></script>
+    <script>
+        //用于生成uuid
+        function uuidUtil() {
+            return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
+        }
+
+        function guid() {
+            return (uuidUtil() + uuidUtil() + "-" + uuidUtil() + "-" + uuidUtil() + "-" + uuidUtil() + "-" + uuidUtil() + uuidUtil() + uuidUtil());
+        }
+
+        function hand() {
+            var id = guid();
+            $('#id').val(id);
+            $('#fm').submit();
+            failThen(id);
+        }
+
+        function failThen(id) {
+            if (confirm("是否已经付款成功？")) {
+                var url = "/alipay/query";
+                $.post(url, {id: id}, function (data) {
+                    console.log(data);
+                    var wf = data.data != null && data.data.deleteFlag === 'YES' ? "待支付" : "交易成功";
+                    console.log(wf);
+                    if (data.flag === 1) {
+                        alert("确实支付成功");
+                    } else {
+                        failThen(id);
+                    }
+                }, 'json');
+            }
+        }
+
+        function closeBusiness() {
+            var id = $('#payInfoId').val();
+            var url = "/alipay/close";
+            $.post(url, {id: id}, function (data) {
+                alert(data.flag);
+            }, 'json');
+        }
+
+        function refund() {
+            var id = guid();
+            var outTradeNo = $('#payInfoId').val();
+            var refundReason = $('#refundReason').val();
+            var refundAmount = $('#refundAmount').val();
+            var url = "/alipay/refund";
+            $.post(url, {
+                outTradeNo: outTradeNo,
+                id: id,
+                refundReason: refundReason,
+                refundAmount: refundAmount
+            }, function (data) {
+                console.log(data);
+                alert(data.flag);
+            }, 'json');
+        }
+
+        function refundQuery() {
+            var outTradeNo = $('#payInfoId').val();
+            var id = $('#refundId').val();
+            var url = "/alipay/refundQuery";
+            $.post(url, {outTradeNo: outTradeNo, id: id}, function (data) {
+                console.log(data);
+                alert(data.flag);
+            }, 'json');
+        }
+
+        function findAll() {
+            var url = "/h2/queryAll";
+            $.post(url, {}, function (data) {
+                $('#payInfo-tbody').text('');
+                var length = data.length;
+                for (var i = 0; i < length; i++) {
+                    var wf = "交易中";
+                    if (data[i].deleteFlag === 'YES') {
+                        wf = "交易成功";
+                    }
+                    var newRow = "<tr><td>" + data[i].id + "</td>" +
+                        "<td>" + data[i].tradeNo + "</td>" +
+                        "<td>" + data[i].totalAmount + "</td>" +
+                        "<td>" + wf + "</td>";
+                    $('#payInfo-tbody').append(newRow);
+                }
+            }, 'json');
+        }
+
+        function findRefund() {
+            var outTradeNo = $('#payInfoId').val();
+            var url = "/h2/queryAllRefund";
+            $.post(url, {outTradeNo: outTradeNo}, function (data) {
+                $('#refundInfo-tbody').text('');
+                var length = data.length;
+                for (var i = 0; i < length; i++) {
+                    var wf = "退款中";
+                    if (data[i].deleteFlag === 'YES') {
+                        wf = "退款成功";
+                    }
+                    var newRow = "<tr><td>" + data[i].id + "</td>" +
+                        "<td>" + data[i].refundReason + "</td>" +
+                        "<td>" + data[i].refundAmount + "</td>" +
+                        "<td>" + wf + "</td>";
+                    $('#refundInfo-tbody').append(newRow);
+                }
+            }, 'json');
+        }
+
+        function findOne() {
+            var id = $('#payInfoId').val();
+            var url = "/h2/queryOne";
+            $.post(url, {id: id}, function (data) {
+                var wf = "交易中";
+                if (data.deleteFlag === 'YES') {
+                    wf = "交易成功";
+                }
+                var result = '商品唯一参数:' + data.id + ',交易单号:' + data.tradeNo + ',金额:' + data.totalAmount + ',交易是否完成:' + wf;
+
+                $('#singleInfo').val(result);
+            }, 'json');
+        }
+    </script>
+</head>
+<body style="font-size: 14px">
+
+<form method="post" id="fm" action="/alipay/gotoPayPage" target="_blank">
+    <input type="text" name="id" id="id" hidden="hidden">
+    <label for="subject">标题</label> <input type="text" name="subject" id="subject"><br>
+    <label for="body">详情</label> <input type="text" name="body" id="body"><br>
+    <label for="totalAmount">金额</label> <input type="text" name="totalAmount" id="totalAmount"><br>
+    <a style="width: 100%; height: 60px; alignment: center; background: #b49e8f;  cursor: pointer;" onclick="hand()">立即支付</a>
+</form>
+<div style="height: 220px;width: 500px">
+    <label for="payInfoId">订单ID</label><input type="text" id="payInfoId"/> <span
+        style="color: darkgrey">退款，退款查询，查找单个</span><br>
+    <label for="refundReason">退款原因</label> <input type="text" id="refundReason"/><span style="color: darkgrey">退款</span><br>
+    <label for="refundAmount">退款金额</label> <input type="text" id="refundAmount"/><span style="color: darkgrey">退款</span><br>
+    <label for="refundId">退款ID</label> <input type="text" id="refundId"/><span style="color: darkgrey">退款查询</span><br>
+    <a href="javascript:void(0)" onclick="closeBusiness()">关闭交易</a><br>
+    <a href="javascript:void(0)" onclick="refund()">退款</a><br>
+    <a href="javascript:void(0)" onclick="refundQuery()">退款查询</a><br>
+    <a href="javascript:void(0)" onclick="findOne()">查找单个</a><br>
+
+    <textarea id="singleInfo" style="width: 1000px">
+    </textarea>
+</div>
+
+<div>
+    <a href="javascript:void(0)" onclick="findAll()">查找全部</a>
+    <table style="border: 1px solid;text-align: center">
+        <thead>
+        <tr>
+            <th style="width: 300px">商品唯一参数</th>
+            <th style="width: 300px">交易单号</th>
+            <th style="width: 300px">金额</th>
+            <th style="width: 300px">交易是否完成</th>
+        </tr>
+        </thead>
+        <tbody id="payInfo-tbody">
+        </tbody>
+    </table>
+</div>
+<div>
+    <a href="javascript:void(0)" onclick="findRefund()">查找订单下全部退款</a>
+    <table style="border: 1px solid;text-align: center">
+        <thead>
+
+        <tr>
+            <th style="width: 300px">退款单号</th>
+            <th style="width: 300px">退款原因</th>
+            <th style="width: 300px">金额</th>
+            <th style="width: 300px">退款是否完成</th>
+        </tr>
+        </thead>
+        <tbody id="refundInfo-tbody">
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,42 @@
+1.付款请求
+(主动请求)
+url-post:/alipay/gotoPayPage
+    String id：订单ID
+    String:subject:标题
+    String:body:订单详情
+    String:totalAmount:总金额
+    String url：项目接收支付结果
+response:跳转阿里自带页面
+(付款完成后，支付宝发送异步通知（一般先到）和同步returnUrl通知，查看结果是否成功，中间件向项目发送多次结果（至少2次）)
+参数设置为：
+     String id：订单ID
+     String tradeNo：支付宝交易号
+     String totalAmount：支付宝返回金额
+     String deleteFlag："YES":代表已经被删掉，支付成功了,"NO"：未被删除，支付中,"CLOSE",关闭
+2.查询交易结果
+（1）：查询缓存里所有的支付信息
+url-post:/h2/queryAll
+    无参
+ response:
+     {[id:**
+      tradeNo:**
+      subject:**
+      totalAmount:**
+      body:**
+      productCode:**
+      dateString:**
+      deleteFlag],...}
+ （2）：查询单条支付信息，缓存里没有会向支付宝查询
+url-post:/h2/queryOne
+    String id：订单ID
+无参，返回单条支付信息，缓存里
+ response:
+ flag 1 成功， 0失败
+ {flag:1,message:**,data: {id:**
+                           tradeNo:**
+                           subject:**
+                           totalAmount:**
+                           body:**
+                           productCode:**
+                           dateString:**
+                           deleteFlag}]
