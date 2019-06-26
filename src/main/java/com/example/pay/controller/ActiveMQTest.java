@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 @Component
-@EnableScheduling
+//@EnableScheduling
 public class ActiveMQTest {
 
     @Autowired
